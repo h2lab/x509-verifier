@@ -32,7 +32,8 @@ static void usage(char *argv0)
 int fimport(u8 *buf, u16 *len, char *fname)
 {
 	u16 rem, copied;
-	int fd, ret;
+	int ret = -1;
+	int fd;
 
 	fd = open(fname, O_RDONLY);
 	if (fd == -1) {
@@ -41,7 +42,7 @@ int fimport(u8 *buf, u16 *len, char *fname)
 		goto err;
 	}
 
-	rem = ASN1_MAX_BUFFER_SIZE;
+	rem = *len;
 	copied = 0;
 	while (rem) {
 		ret = (int)read(fd, buf + copied, rem);
@@ -79,12 +80,14 @@ int main(int argc, char *argv[])
 	}
 
 	/* import cert */
+	tbv_cert_len = sizeof(tbv_cert);
 	ret = fimport(tbv_cert, &tbv_cert_len, tbv_fname);
 	if (ret) {
 		goto err;
 	}
 
 	/* import anchor */
+	anc_cert_len = sizeof(anc_cert);
 	ret = fimport(anc_cert, &anc_cert_len, anc_fname);
 	if (ret) {
 		goto err;
