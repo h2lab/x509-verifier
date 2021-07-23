@@ -13,7 +13,8 @@
 #include "cert-extract.h"
 #include "sig-verif.h"
 
-int x509_cert_verif(unsigned char *buf, unsigned short len)
+int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
+		    unsigned char *anchor_cert, unsigned short anchor_cert_len)
 {
 	unsigned char *tbs_start;
 	unsigned int tbs_len, sig_alg_len;
@@ -27,7 +28,7 @@ int x509_cert_verif(unsigned char *buf, unsigned short len)
 	unsigned char *spki_pub_key_start;
 	unsigned int spki_pub_key_len;
 
-	ret = x509_cert_get_tbs_sig(buf, len, &tbs_start, &tbs_len,
+	ret = x509_cert_get_tbs_sig(tbv_cert, tbv_cert_len, &tbs_start, &tbs_len,
 				   &sig_alg_start, &sig_alg_len,
 				   &sig_start, &sig_len);
 	if (ret) {
@@ -55,7 +56,7 @@ int x509_cert_verif(unsigned char *buf, unsigned short len)
 	printf("\n");
 
 
-	ret = x509_cert_get_SPKI(buf, len,
+	ret = x509_cert_get_SPKI(anchor_cert, anchor_cert_len,
 				 &spki_alg_oid_start, &spki_alg_oid_len,
 				 &spki_pub_key_start, &spki_pub_key_len);
 	if (ret) {

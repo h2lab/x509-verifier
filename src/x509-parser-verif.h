@@ -10,8 +10,7 @@
 #ifndef __X509_PARSER_VERIF_H__
 #define __X509_PARSER_VERIF_H__
 
-// #include "x509-parser.h"
-
-int x509_cert_verif(const unsigned char *buf, unsigned short len);
+int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
+		    unsigned char *anchor_cert, unsigned short anchor_cert_len);
 
 #endif /* __X509_PARSER_VERIF_H__ */
