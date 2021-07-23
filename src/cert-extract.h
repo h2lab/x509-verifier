@@ -12,9 +12,13 @@
 #ifndef __X509_CERT_EXTRACT_H__
 #define __X509_CERT_EXTRACT_H__
 
-int x509_cert_extract(unsigned char *buf, unsigned int len,
-		      unsigned char **tbs_start, unsigned int *tbs_len,
-		      unsigned char **sig_alg_start, unsigned int *sig_alg_len,
-		      unsigned char **sig_start, unsigned int *sig_len);
+int x509_cert_get_tbs_sig(unsigned char *buf, unsigned int len,
+			  unsigned char **tbs_start, unsigned int *tbs_len,
+			  unsigned char **sig_alg_start, unsigned int *sig_alg_len,
+			  unsigned char **sig_start, unsigned int *sig_len);
+
+int x509_cert_get_SPKI(unsigned char *buf, unsigned int len,
+		       unsigned char **spki_alg_oid_start, unsigned int *spki_alg_oid_len,
+		       unsigned char **spki_pub_key_start, unsigned int *spki_pub_key_len);
 
 #endif /* __X509_CERT_EXTRACT_H__ */

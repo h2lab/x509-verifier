@@ -22,10 +22,14 @@ int x509_cert_verif(unsigned char *buf, unsigned short len)
 	unsigned int sig_len;
 	unsigned int i;
 	int ret;
+	unsigned char *spki_alg_oid_start;
+	unsigned int spki_alg_oid_len;
+	unsigned char *spki_pub_key_start;
+	unsigned int spki_pub_key_len;
 
-	ret = x509_cert_extract(buf, len, &tbs_start, &tbs_len,
-				&sig_alg_start, &sig_alg_len,
-				&sig_start, &sig_len);
+	ret = x509_cert_get_tbs_sig(buf, len, &tbs_start, &tbs_len,
+				   &sig_alg_start, &sig_alg_len,
+				   &sig_start, &sig_len);
 	if (ret) {
 		goto err;
 	}
@@ -50,16 +54,37 @@ int x509_cert_verif(unsigned char *buf, unsigned short len)
 	}
 	printf("\n");
 
+
+	ret = x509_cert_get_SPKI(buf, len,
+				 &spki_alg_oid_start, &spki_alg_oid_len,
+				 &spki_pub_key_start, &spki_pub_key_len);
+	if (ret) {
+		printf("error %d\n", ret);
+		goto err;
+	}
+
+	printf("pubkey : ");
+	for (i = 0; i < spki_pub_key_len; i++) {
+		printf("%02x", spki_pub_key_start[i]);
+	}
+	printf("\n");
+
+	printf("pubkey alg oid : ");
+	for (i = 0; i < spki_alg_oid_len; i++) {
+		printf("%02x", spki_alg_oid_start[i]);
+	}
+	printf("\n");
+
 	ctx.tbs = tbs_start;
 	ctx.tbs_len = tbs_len;
-	ctx.sig_alg_oid = NULL;
-	ctx.sig_alg_oid_len = 0;
+	ctx.sig_alg_oid = sig_alg_start;
+	ctx.sig_alg_oid_len = sig_alg_len;
 	ctx.sig = sig_start;
 	ctx.sig_len = sig_len;
-	ctx.pub_key = NULL;
-	ctx.pub_key_len = 0;
-	ctx.pub_key_alg_oid = sig_alg_start;
-	ctx.pub_key_alg_oid_len = sig_alg_len;
+	ctx.pub_key = spki_pub_key_start + 4; /* FIX shift in a better manner */
+	ctx.pub_key_len = spki_pub_key_len - 4; /* FIX shift in a better manner */
+	ctx.pub_key_alg_oid = spki_alg_oid_start;
+	ctx.pub_key_alg_oid_len = spki_alg_oid_len;
 
 	ret = x509_sig_verify(&ctx);
 

@@ -12,10 +12,10 @@
 #include "cert-extract.h"
 #include "../../x509-parser-libecc/src/x509-parser.h" /* FIXME use -I */
 
-int x509_cert_extract(unsigned char *buf, unsigned int len,
-		      unsigned char **tbs_start, unsigned int *tbs_len,
-		      unsigned char **sig_alg_start, unsigned int *sig_alg_len,
-		      unsigned char **sig_start, unsigned int *sig_len)
+int x509_cert_get_tbs_sig(unsigned char *buf, unsigned int len,
+			  unsigned char **tbs_start, unsigned int *tbs_len,
+			  unsigned char **sig_alg_start, unsigned int *sig_alg_len,
+			  unsigned char **sig_start, unsigned int *sig_len)
 {
 	int ret;
 
@@ -33,3 +33,25 @@ int x509_cert_extract(unsigned char *buf, unsigned int len,
 err:
 	return ret;
 }
+
+int x509_cert_get_SPKI(unsigned char *buf, unsigned int len,
+		       unsigned char **spki_alg_oid_start, unsigned int *spki_alg_oid_len,
+		       unsigned char **spki_pub_key_start, unsigned int *spki_pub_key_len)
+{
+	int ret;
+
+	if (buf == NULL || len == 0 || len > 65535 ||
+	    spki_alg_oid_start == NULL || spki_alg_oid_len == NULL ||
+	    spki_pub_key_start == NULL || spki_pub_key_len == NULL) {
+		ret = -1;
+		goto err;
+	}
+
+	ret = x509_cert_extract_SPKI(buf, len,
+				     spki_alg_oid_start, (u16 *)spki_alg_oid_len,
+				     spki_pub_key_start, (u16 *)spki_pub_key_len);
+
+err:
+	return ret;
+}
+
