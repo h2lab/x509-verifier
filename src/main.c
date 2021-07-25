@@ -29,6 +29,11 @@ static void usage(char *argv0)
 	printf("Usage: %s file.der anchor.der\n", argv0);
 }
 
+/*
+ * Import content of file pointed by 'fname' into buffer 'buf' of size provided
+ * by 'len'. On success, size of file copied to 'buf' is given in 'len'. 0 is
+ * returned on success, -1 on error.
+ */
 int fimport(u8 *buf, u16 *len, char *fname)
 {
 	u16 rem, copied;

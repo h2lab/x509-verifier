@@ -11,6 +11,7 @@
 
 #ifndef __X509_SIG_VERIF_H__
 #define __X509_SIG_VERIF_H__
+#include "x509_types.h"
 
 /*
  * The purpose of this header is to provide a type neutral definition for
@@ -41,6 +42,11 @@ typedef struct {
 	/* algorithm OID for given public key above */
 	unsigned char *pub_key_alg_oid;
 	unsigned int pub_key_alg_oid_len;
+
+	/* XXX remove oid entries */
+	x509_ec_sig_alg sig_alg_type;
+	x509_hash_alg hash_alg_type;
+	x509_curve curve_type;
 } x509_sig_verify_ctx;
 
 /*
