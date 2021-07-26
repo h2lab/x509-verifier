@@ -15,14 +15,21 @@
 #include "x509_types.h"
 #include <string.h>
 
-static const unsigned char oid_ecdsa_sha256[] = {
+static const unsigned char oid_ecdsa_sha224[] = { /* 1.2.840.10045.4.3.1 */
+	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x01
+};
+
+static const unsigned char oid_ecdsa_sha256[] = { /* 1.2.840.10045.4.3.2 */
 	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02
 };
 
-static const unsigned char oid_ecdsa_sha384[] = {
+static const unsigned char oid_ecdsa_sha384[] = { /* 1.2.840.10045.4.3.3 */
 	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x03
 };
 
+static const unsigned char oid_ecdsa_sha512[] = { /* 1.2.840.10045.4.3.4 */
+	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x04
+};
 
 /*
  * From signature algorithm OID 'sig_alg_start' of length 'sig_alg_len', the
@@ -43,7 +50,12 @@ static int sig_oid_to_sig_and_hash_types(unsigned char *sig_alg_start,
 	}
 
 	/* XXX Make something more generic */
-	if ((sig_alg_len == sizeof(oid_ecdsa_sha256)) &&
+	if ((sig_alg_len == sizeof(oid_ecdsa_sha224)) &&
+	    !memcmp(sig_alg_start, oid_ecdsa_sha224, sizeof(oid_ecdsa_sha224))) {
+		*sig_alg_type = X509_ECDSA;
+		*hash_alg_type = X509_SHA224;
+		printf("Detected SHA224\n");
+	} else if ((sig_alg_len == sizeof(oid_ecdsa_sha256)) &&
 	    !memcmp(sig_alg_start, oid_ecdsa_sha256, sizeof(oid_ecdsa_sha256))) {
 		*sig_alg_type = X509_ECDSA;
 		*hash_alg_type = X509_SHA256;
@@ -53,6 +65,11 @@ static int sig_oid_to_sig_and_hash_types(unsigned char *sig_alg_start,
 		*sig_alg_type = X509_ECDSA;
 		*hash_alg_type = X509_SHA384;
 		printf("Detected SHA384\n");
+	} else if ((sig_alg_len == sizeof(oid_ecdsa_sha512)) &&
+	    !memcmp(sig_alg_start, oid_ecdsa_sha512, sizeof(oid_ecdsa_sha512))) {
+		*sig_alg_type = X509_ECDSA;
+		*hash_alg_type = X509_SHA512;
+		printf("Detected SHA512\n");
 	} else {
 		printf("here XXX %d\n", sig_alg_len);
 		ret = -1;
@@ -70,12 +87,16 @@ static const unsigned char oid_ecPublicKey[] = { /* 1.2.840.10045.2.1 */
 	0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01
 };
 
+static const unsigned char oid_secp256r1[] = { /* 1.2.840.10045.3.1.7 */
+	0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07
+};
+
 static const unsigned char oid_secp384r1[] = { /* 1.3.132.0.34 */
 	0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x22
 };
 
-static const unsigned char oid_secp256r1[] = { /* 1.2.840.10045.3.1.7 */
-	0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07
+static const unsigned char oid_secp521r1[] = { /* 1.3.132.0.35 */
+	0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x23
 };
 
 /*
@@ -120,6 +141,9 @@ static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 	} else if (remain == sizeof(oid_secp384r1) && !memcmp(buf, oid_secp384r1, remain)) {
 		printf("X509_SECP384R1 %d\n", remain);
 		*curve_type = X509_SECP384R1;
+	} else if (remain == sizeof(oid_secp521r1) && !memcmp(buf, oid_secp521r1, remain)) {
+		printf("X509_SECP521R1 %d\n", remain);
+		*curve_type = X509_SECP521R1;
 	} else {
 		ret = -1;
 		goto err;
@@ -200,8 +224,6 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 		goto err;
 	}
 
-
-
 	printf("tbsCertificate length: %d\n", tbs_len);
 	printf("sig_alg: ");
 	for (i = 0; i < sig_alg_len; i++) {
@@ -224,8 +246,6 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 		printf("%02x", spki_alg_oid_start[i]);
 	}
 	printf("\n");
-
-
 
 	ctx.tbs = tbs_start;
 	ctx.tbs_len = tbs_len;

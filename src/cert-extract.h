@@ -22,4 +22,8 @@ int x509_cert_get_SPKI(unsigned char *buf, unsigned int len,
 
 int x509_cert_self_signed(unsigned char *buf, unsigned int len, int *self_signed);
 
+int x509_sig_ecdsa_extract_r_s(unsigned char *in_sig, unsigned int in_sig_len,
+			       unsigned int coord_len,
+			       unsigned char *r, unsigned char *s);
+
 #endif /* __X509_CERT_EXTRACT_H__ */

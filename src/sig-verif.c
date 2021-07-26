@@ -10,6 +10,7 @@
  */
 
 #include "sig-verif.h"
+#include "cert-extract.h"
 #include "../../libecc-eddsa-sm2-newapi/src/libsig.h" /* FIXME use -I */
 
 static int x509_to_libecc_sig_alg_type(x509_ec_sig_alg in, ec_sig_alg_type *out)
@@ -238,6 +239,11 @@ static int x509_to_libecc_pub_key(unsigned char *in_pub_key, unsigned int in_pub
 		local_memcpy(out_pub, in_pub_key + 4, 48*2);
 		*out_pub_len = 48 * 2;
 		break;
+	case X509_SECP521R1:
+		/* XXX Let's cheat a bit for now */
+		local_memcpy(out_pub, in_pub_key + 5, 66*2);
+		*out_pub_len = 66 * 2;
+		break;
 		/* XXX Add missing algs */
 	default:
 		ret = -1;
@@ -323,13 +329,21 @@ err:
  * 02 21 00dc92a1a013a6cf03b0e6c4219790fa14572d03ecee3cd36ecaa86c76bca2debb  R
  * 02 20   27a88527359b56c6a3f247d2b76e1b020017aa67a61591defa94ec7b0bf89f84  S
  */
+
+/*
+secp521r1 
+03818b00
+308187
+02420119ebfcfccdfa5a00acae57cd072130f5e11e4f36f32142cfe164bb60bd48f0c835f10292430f02f07d1a417933804840fe76d3c7bd1a406abdd6ecd451f92c542d
+0241706edc0d498f7a85352b5853bed5e16ffcc357e66d3d74edb9c32829889ef5bcb5421e8c4bd884a82de17060f969a86c593804404621ded4c41efb1240416ece9d
+*/
+
+
 static int x509_to_libecc_sig_ecdsa(unsigned char *in_sig, unsigned int in_sig_len,
 				    x509_curve curve_type,
 				    u8 *out_sig, u16 *out_sig_len)
 {
 	unsigned int order_len;
-	unsigned int remain;
-	unsigned char *buf;
 	int ret;
 
 	ret = curve_order_len(curve_type, &order_len);
@@ -337,59 +351,13 @@ static int x509_to_libecc_sig_ecdsa(unsigned char *in_sig, unsigned int in_sig_l
 		goto err;
 	}
 
-	/* skip bitstring and sequence parts */
-	remain = in_sig_len - 5;
-	buf = in_sig + 5;
-
-	/* First, handle R */
-
-	if (buf[0] != 0x02) { /* expect integer */
-		ret = -1;
+	ret = x509_sig_ecdsa_extract_r_s(in_sig, in_sig_len, order_len,
+					 out_sig, out_sig + order_len);
+	if (ret) {
 		goto err;
 	}
 
-	if ((buf[1]) == (order_len + 1)) { /* handle possible leading 0 */
-		if (buf[2] != 0) {
-			ret = -1;
-			goto err;
-		}
-		buf += 1;
-		remain -= 1;
-	} else if (buf[1] != order_len) { /* error if size does not match */
-		ret = -1;
-		goto err;
-	}
-
-	buf += 2;
-	remain -= 2;
-	local_memcpy(out_sig, buf, order_len); /* copy R */
-	buf += order_len;
-	remain -= order_len;
-
-	/* Then, handle S */
-
-	if (buf[0] != 0x02) { /* expect integer */
-		ret = -1;
-		goto err;
-	}
-
-	if (buf[1] == (order_len + 1)) { /* handle possible leading 0 */
-		if (buf[2] != 0) {
-			ret = -1;
-			goto err;
-		}
-		buf += 1;
-		remain -= 1;
-	} else if (buf[1] != order_len) { /* error if size does not match */
-		ret = -1;
-		goto err;
-	}
-
-	buf += 2;
-	remain -= 2;
-	local_memcpy(out_sig + order_len, buf, order_len); /* copy S */
-	*out_sig_len = order_len * 2;
-	ret = 0;
+	*out_sig_len = 2 * order_len;
 
 err:
 	return ret;
@@ -448,8 +416,16 @@ int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 
 	/* Let's first get libecc version of sig, hash and curve */
 	ret  = x509_to_libecc_sig_alg_type(ctx->sig_alg_type, &sig_type);
-	ret |= x509_to_libecc_hash_alg_type(ctx->hash_alg_type, &hash_type);
-	ret |= import_curve_params_from_x509_curve_type(ctx->curve_type, &ecp);
+	if (ret) {
+		goto err;
+	}
+
+	ret = x509_to_libecc_hash_alg_type(ctx->hash_alg_type, &hash_type);
+	if (ret) {
+		goto err;
+	}
+
+	ret = import_curve_params_from_x509_curve_type(ctx->curve_type, &ecp);
 	if (ret) {
 		goto err;
 	}
@@ -476,6 +452,9 @@ int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 				 ctx->hash_alg_type,
 				 ctx->curve_type,
 				 sig, &sig_len);
+	if (ret) {
+		goto err;
+	}
 
 	/* verify tbs */
 	ret = ec_verify(sig, sig_len, &pubkey,
