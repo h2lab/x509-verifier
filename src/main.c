@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include "x509-parser-verif.h"
+#include "cert-extract.h"
 
 typedef uint8_t   u8;
 typedef uint16_t u16;
@@ -69,7 +70,7 @@ err:
 	return ret;
 }
 
-int main(int argc, char *argv[])
+int main_tbv_anc(int argc, char *argv[])
 {
 	u8 tbv_cert[ASN1_MAX_BUFFER_SIZE]; /* cert to be verifierd */
 	u8 anc_cert[ASN1_MAX_BUFFER_SIZE]; /* anchor to verify cert */
@@ -104,3 +105,109 @@ int main(int argc, char *argv[])
 err:
 	return ret;
 }
+
+extern int parse_x509_cert_relaxed(const u8 *buf, u16 len, u16 *eaten);
+
+int main_self_signed_relaxed(int argc, char *argv[])
+{
+	u8 buf[ASN1_MAX_BUFFER_SIZE];
+	off_t pos, offset = 0;
+	char *path = argv[1];
+	u16 rem, copied, eaten;
+	int ret, eof = 0;
+	int fd, num_certs, num_certs_ok;
+
+	if (argc != 2) {
+		usage(argv[0]);
+		ret = -1;
+		goto out;
+	}
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1) {
+		printf("Unable to open input file %s\n", path);
+		return -1;
+	}
+
+	num_certs = 0;
+	num_certs_ok = 0;
+	while (1) {
+		pos = lseek(fd, offset, SEEK_SET);
+		if (pos == (off_t)-1) {
+			printf("lseek failed %s\n", path);
+			ret = -1;
+			goto out;
+		}
+		rem = ASN1_MAX_BUFFER_SIZE;
+		copied = 0;
+		while (rem) {
+			ret = (int)read(fd, buf + copied, rem);
+			if (ret <= 0) {
+				if (copied == 0) {
+					eof = 1;
+				}
+				break;
+			} else {
+				rem -= (u16)ret;
+				copied += (u16)ret;
+			}
+		}
+
+		if (eof) {
+			break;
+		}
+
+		num_certs += 1;
+		eaten = 0;
+		ret = parse_x509_cert_relaxed(buf, copied, &eaten);
+		if (ret == 1) {
+			eaten = 1;
+			printf("not a sequence %ld %d\n", offset, num_certs);
+		}
+		if (ret == 0) {
+			int self_signed;
+
+			num_certs_ok += 1;
+			ret = x509_cert_self_signed(buf, eaten, &self_signed);
+			if (!ret) {
+				if (self_signed) {
+					/* verify cert using anchor */
+					ret = x509_cert_verif(buf, eaten, buf, eaten);
+					if (ret) {
+						printf("z %s %llu %d\n", path, offset, eaten);
+					}
+				}
+			}
+		}
+
+		offset += eaten;
+	}
+	close(fd);
+
+	ret = 0;
+
+	printf("num_certs OK %d/%d\n", num_certs_ok, num_certs);
+
+out:
+	return ret;
+}
+
+
+
+
+int main(int argc, char *argv[])
+{
+	int ret;
+
+	if (argc == 3) {
+		ret = main_tbv_anc(argc, argv);
+	} else if (argc == 2) {
+		ret = main_self_signed_relaxed(argc, argv);
+	} else {
+		usage(argv[0]);
+		ret = -1;
+	}
+
+	return ret;
+}
+

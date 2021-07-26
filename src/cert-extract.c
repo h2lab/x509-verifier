@@ -26,6 +26,17 @@ int x509_cert_get_tbs_sig(unsigned char *buf, unsigned int len,
 		goto err;
 	}
 
+	/*
+	 * Caution: the function below will only set the 16 LSB of out parameter
+	 * on return. For that reason, we MUST initialize the values to 0 before
+	 * passing the variable if we do not want to get random garbage in MSB.
+	 *
+	 * XXXX we should revisit that and have an interface with homogenous
+	 * types, for instance by using uint16_t here.
+	 */
+	*tbs_len = 0;
+	*sig_alg_len = 0;
+	*sig_len = 0;
 	ret = x509_cert_extract_tbs_and_sig(buf, len, tbs_start, (u16 *)tbs_len,
 					    sig_alg_start, (u16 *)sig_alg_len,
 					    sig_start, (u16 *)sig_len);
@@ -47,11 +58,23 @@ int x509_cert_get_SPKI(unsigned char *buf, unsigned int len,
 		goto err;
 	}
 
+	/*
+	 * Caution: the function below will only set the 16 LSB of out parameter
+	 * on return. For that reason, we MUST initialize the values to 0 before
+	 * passing the variable if we do not want to get random garbage in MSB.
+	 */
+	*spki_alg_oid_len = 0;
+	*spki_pub_key_len = 0;
 	ret = x509_cert_extract_SPKI(buf, len,
 				     spki_alg_oid_start, (u16 *)spki_alg_oid_len,
 				     spki_pub_key_start, (u16 *)spki_pub_key_len);
 
 err:
 	return ret;
+}
+
+int x509_cert_self_signed(unsigned char *buf, unsigned int len, int *self_signed)
+{
+	return x509_cert_is_self_signed(buf, (u16)len, self_signed);
 }
 

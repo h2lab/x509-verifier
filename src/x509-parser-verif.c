@@ -54,6 +54,7 @@ static int sig_oid_to_sig_and_hash_types(unsigned char *sig_alg_start,
 		*hash_alg_type = X509_SHA384;
 		printf("Detected SHA384\n");
 	} else {
+		printf("here XXX %d\n", sig_alg_len);
 		ret = -1;
 		goto err;
 	}
@@ -164,6 +165,7 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 		goto err;
 	}
 
+	printf("sig_alg_len %d\n", sig_alg_len);
 	/*
 	 * Now, extract from anchor:
 	 *
@@ -187,7 +189,7 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 	ret = sig_oid_to_sig_and_hash_types(sig_alg_start, sig_alg_len,
 					    &sig_alg_type, &hash_alg_type);
 	if (ret) {
-		printf("Error handling sig OID\n");
+		printf("Error handling sig OID %d\n", sig_alg_len);
 		goto err;
 	}
 
