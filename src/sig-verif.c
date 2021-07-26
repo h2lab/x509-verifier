@@ -251,12 +251,153 @@ err:
 	return ret;
 }
 
+/*
+ * on success, returns the number of bytes on which curve order is
+ * encoded, e.g. 32 for secp256r1, 66 for secp521r1, etc.
+ */
+static int curve_order_len(x509_curve curve_type, unsigned int *order_len)
+{
+	int ret;
+
+	switch (curve_type) {
+	case X509_SECP192R1:
+	case X509_BRAINPOOLP192R1:
+		*order_len = 24;
+		break;
+	case X509_FRP256V1:
+	case X509_SECP256R1:
+	case X509_BRAINPOOLP256R1:
+	case X509_SM2P256V1:
+		*order_len = 32;
+		break;
+	case X509_SECP224R1:
+	case X509_BRAINPOOLP224R1:
+		*order_len = 28;
+		break;
+	case X509_SECP384R1:
+	case X509_BRAINPOOLP384R1:
+		*order_len = 48;
+		break;
+	case X509_BRAINPOOLP512R1:
+		*order_len = 64;
+		break;
+	case X509_SECP521R1:
+		*order_len = 66;
+		break;
+#if 0 /* XXX revisit when adding proper GOST curves support */
+	case X509_GOST256:
+		*order_len = 32;
+		break;
+	case X509_GOST512:
+		*order_len = 64;
+		break;
+#endif
+	default:
+		ret = -1;
+		goto err;
+		break;
+	}
+
+	ret = 0;
+
+err:
+	return ret;
+}
+
+/*
+ * For ECDSA, libecc expects a sig in raw format, i.e. concatenated R and S with
+ * each integer having a size on exactly the expected number of bytes which is
+ * the order length (R and S are reduced modulo the order).
+ *
+ * When R and S are packaged in the certificate signature, they are put in a
+ * bitstring which encapsulates a sequence of two integers. As seen in numerous
+ * certificates, the integer values may have leading 0 which must be removed
+ * during conversion.
+ *
+ * XXX Most of that function should be moved to the cert-extract module and
+ * modified to work in a proper way. This is only a fragile PoC yet.
+ *
+ * Example of what we are dealing with (ECDSA sig on secp256r1):
+ * 034800 bitstring
+ * 3045 sequence
+ * 02 21 00dc92a1a013a6cf03b0e6c4219790fa14572d03ecee3cd36ecaa86c76bca2debb  R
+ * 02 20   27a88527359b56c6a3f247d2b76e1b020017aa67a61591defa94ec7b0bf89f84  S
+ */
+static int x509_to_libecc_sig_ecdsa(unsigned char *in_sig, unsigned int in_sig_len,
+				    x509_curve curve_type,
+				    u8 *out_sig, u16 *out_sig_len)
+{
+	unsigned int order_len;
+	unsigned int remain;
+	unsigned char *buf;
+	int ret;
+
+	ret = curve_order_len(curve_type, &order_len);
+	if (ret) {
+		goto err;
+	}
+
+	/* skip bitstring and sequence parts */
+	remain = in_sig_len - 5;
+	buf = in_sig + 5;
+
+	/* First, handle R */
+
+	if (buf[0] != 0x02) { /* expect integer */
+		ret = -1;
+		goto err;
+	}
+
+	if ((buf[1]) == (order_len + 1)) { /* handle possible leading 0 */
+		if (buf[2] != 0) {
+			ret = -1;
+			goto err;
+		}
+		buf += 1;
+		remain -= 1;
+	} else if (buf[1] != order_len) { /* error if size does not match */
+		ret = -1;
+		goto err;
+	}
+
+	buf += 2;
+	remain -= 2;
+	local_memcpy(out_sig, buf, order_len); /* copy R */
+	buf += order_len;
+	remain -= order_len;
+
+	/* Then, handle S */
+
+	if (buf[0] != 0x02) { /* expect integer */
+		ret = -1;
+		goto err;
+	}
+
+	if (buf[1] == (order_len + 1)) { /* handle possible leading 0 */
+		if (buf[2] != 0) {
+			ret = -1;
+			goto err;
+		}
+		buf += 1;
+		remain -= 1;
+	} else if (buf[1] != order_len) { /* error if size does not match */
+		ret = -1;
+		goto err;
+	}
+
+	buf += 2;
+	remain -= 2;
+	local_memcpy(out_sig + order_len, buf, order_len); /* copy S */
+	*out_sig_len = order_len * 2;
+	ret = 0;
+
+err:
+	return ret;
+}
 
 /*
  * Convert signature from X.509 certificate to the format expected by libecc.
  * this depends on the 
-
-
  */
 static int x509_to_libecc_sig(unsigned char *in_sig, unsigned int in_sig_len,
 			      x509_ec_sig_alg sig_type,
@@ -272,47 +413,17 @@ static int x509_to_libecc_sig(unsigned char *in_sig, unsigned int in_sig_len,
 	}
 
 	(void)hash_type; /* XXX silence */
-	(void)curve_type; /* XXX silence */
 
 	switch (sig_type) {
 	case X509_ECDSA:
-		/* Let's cheat a bit for now */
-		/*
-		 * For ECDSA, libecc expects a sig in raw format, i.e.
-		 * concatenated R and S and not two integers as found
-		 * in certs
-		 */
-		if (curve_type == X509_SECP384R1) {
-			local_memcpy(out_sig, in_sig + 8, 48);
-			local_memcpy(out_sig + 48, in_sig + 58, 48);
-			*out_sig_len = 48 * 2;
-#if 0
-			{
-				unsigned int i;
-				printf("SIG: ");
-				for (i = 0; i < *out_sig_len; i++) {
-					printf("%02x", out_sig[i]);
-				}
-				printf("\n");
-			}
-#endif
-		} else if (curve_type == X509_SECP256R1) {
-			local_memcpy(out_sig, in_sig + 8, 32);
-			local_memcpy(out_sig + 32, in_sig + 46, 32);
-			*out_sig_len = 32 * 2;
-		} else {
-			ret = -1;
-			goto err;
-		}
+		ret = x509_to_libecc_sig_ecdsa(in_sig, in_sig_len, curve_type,
+					       out_sig, out_sig_len);
 		break;
-		/* XXX Add missing algs */
 	default:
 		ret = -1;
 		goto err;
 		break;
 	}
-
-	ret = 0;
 
 err:
 	return ret;
