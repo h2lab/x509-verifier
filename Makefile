@@ -12,7 +12,7 @@ include common.mk
 
 all: $(EXEC)
 
-$(BUILD_DIR)/x509-verif: src/main.c $(BUILD_DIR)/x509-parser-verif.o $(BUILD_DIR)/cert-extract.o $(BUILD_DIR)/sig-verif.o $(BUILD_DIR)/rand.o
+$(BUILD_DIR)/x509-verif: src/main.c $(BUILD_DIR)/x509-verif.o $(BUILD_DIR)/cert-extract.o $(BUILD_DIR)/sig-verif.o $(BUILD_DIR)/rand.o
 	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/x509-verif.o: src/x509-verif.c src/x509-verif.h
