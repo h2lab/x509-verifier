@@ -50,6 +50,14 @@ static const unsigned char oid_sm2_with_sm3_bis[] = { /* 1.2.156.10197.1.501 */
 	0x05, 0x00
 };
 
+static const unsigned char oid_ed25519[] = { /* "1.3.101.112" */
+	0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70
+};
+
+static const unsigned char oid_ed448[] = { /* "1.3.101.113" */
+	0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x71
+};
+
 /*
  * From signature algorithm OID 'sig_alg_start' of length 'sig_alg_len', the
  * function returns associated signature and hash algorithm types. The
@@ -99,6 +107,16 @@ static int sig_oid_to_sig_and_hash_types(unsigned char *sig_alg_start,
 		*sig_alg_type = X509_SM2;
 		*hash_alg_type = X509_SM3;
 		printf("Detected SM2 w/ SM3 (weird OID)\n");
+	} else if ((sig_alg_len == sizeof(oid_ed25519)) &&
+	    !memcmp(sig_alg_start, oid_ed25519, sizeof(oid_ed25519))) {
+		*sig_alg_type = X509_EDDSA25519;
+		*hash_alg_type = X509_SHA512;
+		printf("Detected EDDSA 25519\n");
+	} else if ((sig_alg_len == sizeof(oid_ed448)) &&
+	    !memcmp(sig_alg_start, oid_ed448, sizeof(oid_ed448))) {
+		*sig_alg_type = X509_EDDSA448;
+		*hash_alg_type = X509_SHAKE256;
+		printf("Detected EDDSA 448\n");
 	} else {
 		unsigned int i;
 		printf("Signature: ");
@@ -143,6 +161,12 @@ static const unsigned char oid_sm2p256v1[] = { /* 1.2.156.10197.1.301*/
  * From OID 'spki_alg_oid_start' of 'spki_alg_oid_len' length from subject
  * public key info, the function returns associated curve. The function
  * returns 0 on success, -1 on error.
+ *
+ * It currently support:
+ *  - all ecPublicKey-based encoding which consists in a sequence containing
+ *     ecPublicKey OID followed by the curve OID
+ *  - Ed25519 and Ed448 curves which consists in a sequence containsing
+ *    a single OID.
  */
 static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 				   unsigned int spki_alg_oid_len,
@@ -158,15 +182,36 @@ static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 		goto err;
 	}
 
+	{
+		unsigned int i;
+		printf("OID: ");
+		for (i = 0; i < spki_alg_oid_len; i++) {
+			printf("%02x", spki_alg_oid_start[i]);
+		}
+		printf("\n");
+	}
+
+	buf = spki_alg_oid_start;
+	if ((spki_alg_oid_len == sizeof(oid_ed448)) &&
+	    !memcmp(buf, oid_ed448, sizeof(oid_ed448))) {
+		*curve_type = X509_WEI448;
+		ret = 0;
+		goto err;
+	} else if ((spki_alg_oid_len == sizeof(oid_ed25519)) &&
+	    !memcmp(buf, oid_ed25519, sizeof(oid_ed25519))) {
+		*curve_type = X509_WEI25519;
+		ret = 0;
+		goto err;
+	} else if (spki_alg_oid_len < (2 + sizeof(oid_ecPublicKey))) {
+		ret = -1;
+		goto err;
+	}
+
 	/*
 	 * We expect a sequence of 2 OID, e.g. 3010 06072a8648ce3d0201 06052b81040022.
 	 * The first one being 06072a8648ce3d0201, i.e. ecPublicKey and the next one
 	 * providing the curve OID.
 	 */
-	if (spki_alg_oid_len < (2 + sizeof(oid_ecPublicKey))) {
-		ret = -1;
-		goto err;
-	}
 
 	if (memcmp(spki_alg_oid_start + 2, oid_ecPublicKey, sizeof(oid_ecPublicKey))) {
 		ret = -1;
@@ -175,16 +220,20 @@ static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 
 	buf = spki_alg_oid_start + 2 + sizeof(oid_ecPublicKey);
 	remain = spki_alg_oid_len - (2 + sizeof(oid_ecPublicKey));
-	if (remain == sizeof(oid_secp256r1) && !memcmp(buf, oid_secp256r1, remain)) {
+	if (remain == sizeof(oid_secp256r1) &&
+	    !memcmp(buf, oid_secp256r1, remain)) {
 		printf("X509_SECP256R1 %d\n", remain);
 		*curve_type = X509_SECP256R1;
-	} else if (remain == sizeof(oid_secp384r1) && !memcmp(buf, oid_secp384r1, remain)) {
+	} else if (remain == sizeof(oid_secp384r1) &&
+		   !memcmp(buf, oid_secp384r1, remain)) {
 		printf("X509_SECP384R1 %d\n", remain);
 		*curve_type = X509_SECP384R1;
-	} else if (remain == sizeof(oid_secp521r1) && !memcmp(buf, oid_secp521r1, remain)) {
+	} else if (remain == sizeof(oid_secp521r1) &&
+		   !memcmp(buf, oid_secp521r1, remain)) {
 		printf("X509_SECP521R1 %d\n", remain);
 		*curve_type = X509_SECP521R1;
-	} else if (remain == sizeof(oid_sm2p256v1) && !memcmp(buf, oid_sm2p256v1, remain)) {
+	} else if (remain == sizeof(oid_sm2p256v1) &&
+		   !memcmp(buf, oid_sm2p256v1, remain)) {
 		printf("X509_SM2P256V1 %d\n", remain);
 		*curve_type = X509_SM2P256V1;
 	} else {

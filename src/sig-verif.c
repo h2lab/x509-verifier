@@ -245,6 +245,16 @@ static int x509_to_libecc_pub_key(unsigned char *in_pub_key, unsigned int in_pub
 		local_memcpy(out_pub, in_pub_key + 5, 66*2);
 		*out_pub_len = 66 * 2;
 		break;
+	case X509_WEI25519:
+		/* XXX Let's cheat a bit for now */
+		local_memcpy(out_pub, in_pub_key + 3, 64/2);
+		*out_pub_len = 64/2;
+		break;
+	case X509_WEI448:
+		/* XXX Let's cheat a bit for now */
+		local_memcpy(out_pub, in_pub_key + 3, 114/2);
+		*out_pub_len = 114/2;
+		break;
 		/* XXX Add missing algs */
 	default:
 		ret = -1;
@@ -340,7 +350,8 @@ secp521r1
 */
 
 
-static int x509_to_libecc_sig_ecdsa(unsigned char *in_sig, unsigned int in_sig_len,
+static int x509_to_libecc_sig_ecdsa(unsigned char *in_sig,
+				    unsigned int in_sig_len,
 				    x509_curve curve_type,
 				    u8 *out_sig, u16 *out_sig_len)
 {
@@ -364,9 +375,41 @@ err:
 	return ret;
 }
 
+static int x509_to_libecc_sig_eddsa(unsigned char *in_sig,
+				    unsigned int in_sig_len,
+				    x509_curve curve_type,
+				    u8 *out_sig, u16 *out_sig_len)
+{
+	unsigned int hsize;
+	int ret;
+
+	switch (curve_type) {
+	case X509_WEI25519:
+		hsize = 64; /* SHA512 */
+		break;
+	case X509_WEI448:
+		hsize = 114; /* SHAKE256 */
+		break;
+	default:
+		ret = -1;
+		goto err;
+	}
+
+	ret = x509_sig_eddsa_extract_r_s(in_sig, in_sig_len, hsize,
+					 out_sig, out_sig + hsize/2);
+	if (ret) {
+		goto err;
+	}
+
+	*out_sig_len = hsize;
+
+err:
+	return ret;
+}
+
 /*
  * Convert signature from X.509 certificate to the format expected by libecc.
- * this depends on the 
+ * this depends on the
  */
 static int x509_to_libecc_sig(unsigned char *in_sig, unsigned int in_sig_len,
 			      x509_ec_sig_alg sig_type,
@@ -387,6 +430,11 @@ static int x509_to_libecc_sig(unsigned char *in_sig, unsigned int in_sig_len,
 	case X509_SM2:
 	case X509_ECDSA:
 		ret = x509_to_libecc_sig_ecdsa(in_sig, in_sig_len, curve_type,
+					       out_sig, out_sig_len);
+		break;
+	case X509_EDDSA25519:
+	case X509_EDDSA448:
+		ret = x509_to_libecc_sig_eddsa(in_sig, in_sig_len, curve_type,
 					       out_sig, out_sig_len);
 		break;
 	default:
@@ -451,10 +499,18 @@ int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 	}
 
 	/* And then import it */
-	ret = ec_pub_key_import_from_aff_buf(&pubkey, &ecp,
-					     pub, pub_len, sig_type);
-	if (ret) {
-		goto err;
+
+	if ((sig_type == EDDSA25519) || (sig_type == EDDSA448)) {
+		ret = eddsa_import_pub_key(&pubkey, pub, pub_len, &ecp, sig_type);
+		if (ret) {
+			goto err;
+		}
+	} else { /* ECDSA, SM2 */
+		ret = ec_pub_key_import_from_aff_buf(&pubkey, &ecp,
+						    pub, pub_len, sig_type);
+		if (ret) {
+			goto err;
+		}
 	}
 
 	sig_len = sizeof(sig);

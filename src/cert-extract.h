@@ -26,4 +26,8 @@ int x509_sig_ecdsa_extract_r_s(unsigned char *in_sig, unsigned int in_sig_len,
 			       unsigned int coord_len,
 			       unsigned char *r, unsigned char *s);
 
+int x509_sig_eddsa_extract_r_s(unsigned char *in_sig, unsigned int in_sig_len,
+			       unsigned int hsize,
+			       unsigned char *r, unsigned char *s);
+
 #endif /* __X509_CERT_EXTRACT_H__ */
