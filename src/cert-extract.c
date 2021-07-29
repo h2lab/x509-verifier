@@ -1,16 +1,16 @@
 /*
- *  Copyright (C) 2021 - This file is part of x509-parser-verif project
+ *  Copyright (C) 2021 - This file is part of x509-verif project
  *
  *  Author:
  *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *      Ryad BENADJILA <ryad.benadjila@ssi.gouv.fr>
  *
  *  This software is licensed under a dual GPLv2/BSD license. See
  *  LICENSE file at the root folder of the project.
  */
 
 #include "cert-extract.h"
-#include "../../x509-parser-libecc/src/x509-parser.h" /* FIXME use -I */
+#include "../../x509-parser-verif/src/x509-parser.h" /* FIXME use -I */
 
 int x509_cert_get_tbs_sig(unsigned char *buf, unsigned int len,
 			  unsigned char **tbs_start, unsigned int *tbs_len,

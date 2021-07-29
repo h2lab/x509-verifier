@@ -1,8 +1,9 @@
 /*
- *  Copyright (C) 2021 - This file is part of x509-parser project
+ *  Copyright (C) 2021 - This file is part of x509-verif project
  *
  *  Author:
  *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *      Ryad BENADJILA <ryadbenadjila@gmail.com>
  *
  *  This software is licensed under a dual GPLv2/BSD license. See
  *  LICENSE file at the root folder of the project.
@@ -174,7 +175,9 @@ int main_self_signed_relaxed(int argc, char *argv[])
 					/* verify cert using anchor */
 					ret = x509_cert_verif(buf, eaten, buf, eaten);
 					if (ret) {
-						printf("z %s %llu %d\n", path, offset, eaten);
+						printf("Sig verif failed for %s %llu %d\n", path, offset, eaten);
+					} else {
+						printf("Sig verif OK for %s\n");
 					}
 				}
 			}

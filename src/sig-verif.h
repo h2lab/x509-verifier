@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 - This file is part of x509-parser-verif project
+ *  Copyright (C) 2021 - This file is part of x509-verif project
  *
  *  Author:
  *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>

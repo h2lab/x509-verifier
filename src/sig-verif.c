@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 - This file is part of x509-parser-verif project
+ *  Copyright (C) 2021 - This file is part of x509-verif project
  *
  *  Author:
  *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
@@ -11,7 +11,7 @@
 
 #include "sig-verif.h"
 #include "cert-extract.h"
-#include "../../libecc-eddsa-sm2-newapi/src/libsig.h" /* FIXME use -I */
+#include "../../libecc-verif/src/libsig.h" /* FIXME use -I */
 
 static int x509_to_libecc_sig_alg_type(x509_ec_sig_alg in, ec_sig_alg_type *out)
 {
