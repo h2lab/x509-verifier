@@ -229,6 +229,7 @@ static int x509_to_libecc_pub_key(unsigned char *in_pub_key, unsigned int in_pub
 	}
 
 	switch (curve_type) {
+	case X509_SM2P256V1:
 	case X509_SECP256R1:
 		/* XXX Let's cheat a bit for now */
 		local_memcpy(out_pub, in_pub_key + 4, 32*2);
@@ -383,6 +384,7 @@ static int x509_to_libecc_sig(unsigned char *in_sig, unsigned int in_sig_len,
 	(void)hash_type; /* XXX silence */
 
 	switch (sig_type) {
+	case X509_SM2:
 	case X509_ECDSA:
 		ret = x509_to_libecc_sig_ecdsa(in_sig, in_sig_len, curve_type,
 					       out_sig, out_sig_len);
@@ -397,6 +399,13 @@ err:
 	return ret;
 }
 
+/*
+  https://patchwork.kernel.org/project/linux-security-module/patch/20200920162103.83197-10-tianjia.zhang@linux.alibaba.com/
+  The default user id as specified in GM/T 0009-2012 
+*/
+const u8 sm2_default_user_id[] = "1234567812345678";
+const u16 sm2_default_user_id_len = sizeof(sm2_default_user_id) - 1; /* 16 */
+
 int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 {
 	ec_sig_alg_type sig_type;
@@ -408,6 +417,8 @@ int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 	u8 sig[EC_MAX_SIGLEN];
 	u16 sig_len;
 	int ret;
+	const u8 *adata;
+	u16 adata_len;
 
 	if (ctx == NULL) {
 		ret = -1;
@@ -456,10 +467,21 @@ int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 		goto err;
 	}
 
+	adata = NULL;
+	adata_len = 0;
+	if (sig_type == SM2) {
+		/*
+		 * SM2 is passed user id (required to compute ZA using)
+		 * via ancillary data.
+		 */
+		adata = sm2_default_user_id;
+		adata_len = sm2_default_user_id_len;
+	}
+
 	/* verify tbs */
 	ret = ec_verify(sig, sig_len, &pubkey,
 			ctx->tbs, ctx->tbs_len,
-			sig_type, hash_type, NULL, 0);
+			sig_type, hash_type, adata, adata_len);
 
 err:
 	return ret;

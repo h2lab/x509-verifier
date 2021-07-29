@@ -177,7 +177,7 @@ int main_self_signed_relaxed(int argc, char *argv[])
 					if (ret) {
 						printf("Sig verif failed for %s %llu %d\n", path, offset, eaten);
 					} else {
-						printf("Sig verif OK for %s\n");
+						printf("Sig verif OK for %s\n", path);
 					}
 				}
 			}

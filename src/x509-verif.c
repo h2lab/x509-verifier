@@ -15,6 +15,11 @@
 #include "x509-types.h"
 #include <string.h>
 
+/* XXX FIXME
+ * revisit that: at the momoent, we deal with a sequence encapsulating
+ * the OID and not the OID itself. Clarify or revisit.
+ */
+
 static const unsigned char oid_ecdsa_sha224[] = { /* 1.2.840.10045.4.3.1 */
 	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x01
 };
@@ -29,6 +34,10 @@ static const unsigned char oid_ecdsa_sha384[] = { /* 1.2.840.10045.4.3.3 */
 
 static const unsigned char oid_ecdsa_sha512[] = { /* 1.2.840.10045.4.3.4 */
 	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x04
+};
+
+static const unsigned char oid_sm2_with_sm3[] = { /* 1.2.156.10197.1.501 */
+	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x81, 0x1c, 0xcf, 0x55, 0x01, 0x83, 0x75
 };
 
 /*
@@ -54,22 +63,27 @@ static int sig_oid_to_sig_and_hash_types(unsigned char *sig_alg_start,
 	    !memcmp(sig_alg_start, oid_ecdsa_sha224, sizeof(oid_ecdsa_sha224))) {
 		*sig_alg_type = X509_ECDSA;
 		*hash_alg_type = X509_SHA224;
-		printf("Detected SHA224\n");
+		printf("Detected ECDSA w/ SHA224\n");
 	} else if ((sig_alg_len == sizeof(oid_ecdsa_sha256)) &&
 	    !memcmp(sig_alg_start, oid_ecdsa_sha256, sizeof(oid_ecdsa_sha256))) {
 		*sig_alg_type = X509_ECDSA;
 		*hash_alg_type = X509_SHA256;
-		printf("Detected SHA256\n");
+		printf("Detected ECDSA w/ SHA256\n");
 	} else if ((sig_alg_len == sizeof(oid_ecdsa_sha384)) &&
 	    !memcmp(sig_alg_start, oid_ecdsa_sha384, sizeof(oid_ecdsa_sha384))) {
 		*sig_alg_type = X509_ECDSA;
 		*hash_alg_type = X509_SHA384;
-		printf("Detected SHA384\n");
+		printf("Detected ECDSA w/ SHA384\n");
 	} else if ((sig_alg_len == sizeof(oid_ecdsa_sha512)) &&
 	    !memcmp(sig_alg_start, oid_ecdsa_sha512, sizeof(oid_ecdsa_sha512))) {
 		*sig_alg_type = X509_ECDSA;
 		*hash_alg_type = X509_SHA512;
-		printf("Detected SHA512\n");
+		printf("Detected ECDSA w/ SHA512\n");
+	} else if ((sig_alg_len == sizeof(oid_sm2_with_sm3)) &&
+	    !memcmp(sig_alg_start, oid_sm2_with_sm3, sizeof(oid_sm2_with_sm3))) {
+		*sig_alg_type = X509_SM2;
+		*hash_alg_type = X509_SM3;
+		printf("Detected SM2 w/ SM3\n");
 	} else {
 		printf("here XXX %d\n", sig_alg_len);
 		ret = -1;
@@ -97,6 +111,10 @@ static const unsigned char oid_secp384r1[] = { /* 1.3.132.0.34 */
 
 static const unsigned char oid_secp521r1[] = { /* 1.3.132.0.35 */
 	0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x23
+};
+
+static const unsigned char oid_sm2p256v1[] = { /* 1.2.156.10197.1.301*/
+	0x06, 0x08, 0x2a, 0x81, 0x1c, 0xcf, 0x55, 0x01, 0x82, 0x2d
 };
 
 /*
@@ -144,6 +162,9 @@ static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 	} else if (remain == sizeof(oid_secp521r1) && !memcmp(buf, oid_secp521r1, remain)) {
 		printf("X509_SECP521R1 %d\n", remain);
 		*curve_type = X509_SECP521R1;
+	} else if (remain == sizeof(oid_sm2p256v1) && !memcmp(buf, oid_sm2p256v1, remain)) {
+		printf("X509_SM2P256V1 %d\n", remain);
+		*curve_type = X509_SM2P256V1;
 	} else {
 		ret = -1;
 		goto err;
@@ -264,7 +285,7 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 
 	ret = x509_sig_verify(&ctx);
 
-	printf("Signature verifation ");
+	printf("Signature verification ");
 	printf("%s\n", ret ? "FAILED" : "SUCCESS");
 
 err:
