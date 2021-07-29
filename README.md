@@ -1,4 +1,4 @@
-# x509-parser-verif project
+# x509-verif project
 
 ## Copyright and license
 Copyright (C) 2021
