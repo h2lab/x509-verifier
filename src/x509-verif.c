@@ -40,6 +40,16 @@ static const unsigned char oid_sm2_with_sm3[] = { /* 1.2.156.10197.1.501 */
 	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x81, 0x1c, 0xcf, 0x55, 0x01, 0x83, 0x75
 };
 
+/* The same as above but with a NULL (0x05, 0x00) in the sequence just after
+   the OID. XXX It is unclear if this should be treated as invalid.
+   this has been seen on SM2 DER certificate with SHA256
+   197bd11845b507deef64f59dd718142db7aa1ad89ae0000ee051f8343f13efdf
+*/
+static const unsigned char oid_sm2_with_sm3_bis[] = { /* 1.2.156.10197.1.501 */
+	0x30, 0x0c, 0x06, 0x08, 0x2a, 0x81, 0x1c, 0xcf, 0x55, 0x01, 0x83, 0x75,
+	0x05, 0x00
+};
+
 /*
  * From signature algorithm OID 'sig_alg_start' of length 'sig_alg_len', the
  * function returns associated signature and hash algorithm types. The
@@ -84,7 +94,19 @@ static int sig_oid_to_sig_and_hash_types(unsigned char *sig_alg_start,
 		*sig_alg_type = X509_SM2;
 		*hash_alg_type = X509_SM3;
 		printf("Detected SM2 w/ SM3\n");
+	} else if ((sig_alg_len == sizeof(oid_sm2_with_sm3_bis)) &&
+	    !memcmp(sig_alg_start, oid_sm2_with_sm3_bis, sizeof(oid_sm2_with_sm3_bis))) {
+		*sig_alg_type = X509_SM2;
+		*hash_alg_type = X509_SM3;
+		printf("Detected SM2 w/ SM3 (weird OID)\n");
 	} else {
+		unsigned int i;
+		printf("Signature: ");
+		for (i = 0; i < sig_alg_len; i++) {
+			printf("%02x", sig_alg_start[i]);
+		}
+		printf("\n");
+
 		printf("here XXX %d\n", sig_alg_len);
 		ret = -1;
 		goto err;
