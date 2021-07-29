@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include "cert-extract.h"
 #include "sig-verif.h"
-#include "x509_types.h"
+#include "x509-types.h"
 #include <string.h>
 
 static const unsigned char oid_ecdsa_sha224[] = { /* 1.2.840.10045.4.3.1 */

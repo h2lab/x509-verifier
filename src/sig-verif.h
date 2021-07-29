@@ -11,7 +11,7 @@
 
 #ifndef __X509_SIG_VERIF_H__
 #define __X509_SIG_VERIF_H__
-#include "x509_types.h"
+#include "x509-types.h"
 
 /*
  * The purpose of this header is to provide a type neutral definition for
