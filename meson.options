@@ -1,0 +1,8 @@
+# Project-specific options will go here
+# buildtype is a built-in Meson option (debug/release)
+
+option('with_tests',
+	type: 'boolean',
+	value: false,
+	description: 'Build test binaries from tests/'
+)

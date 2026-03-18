@@ -1,0 +1,27 @@
+arno@plop:~/projets/private/x509-parser/certs/exotic/GOST$ for k in *.der ; do openssl x509 -text -noout -inform DER -in $k ; done | grep Algorithm | cut -d: -f2 | sort -u >> README
+ GOST R 34.10-2001
+ GOST R 34.10-2012 with 256 bit modulus
+ GOST R 34.10-2012 with 512 bit modulus
+ GOST R 34.10-2012 with GOST R 34.11-2012 (256 bit)
+ GOST R 34.10-2012 with GOST R 34.11-2012 (512 bit)
+ GOST R 34.10-94
+ GOST R 34.11-94 with GOST R 34.10-2001
+ GOST R 34.11-94 with GOST R 34.10-94
+ rsaEncryption
+ sha1WithRSAEncryption
+
+
+
+
+Sig:   RFC 4491 GOST R 34.10-94
+       RFC 4491 GOST R 34.10-2001
+       RFC 7091: GOST R 34.10-2012 with 256 bit modulus
+       RFC 7091: GOST R 34.10-2012 with 512 bit modulus
+       RFC 7091: GOST R 34.10-2012 with GOST R 34.11-2012 (256 bit)
+       RFC 7091: GOST R 34.10-2012 with GOST R 34.11-2012 (512 bit)
+Hash:  RFC 4491: GOST R 34.11-94
+
+
+
+RFC 6986, RFC 5831: GOST R 34.11-2012: Hash Function
+RFC 7801: GOST R 34.12-2015: Block Cipher "Kuznyechik"

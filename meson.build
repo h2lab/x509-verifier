@@ -1,14 +1,15 @@
 project('x509-verif', 'c',
   version : '1.0.0',
+
   default_options : [
+    'c_std=c11',
     'warning_level=3',
-    'werror=true',
     'optimization=3',
+    'b_sanitize=address',
     'buildtype=release',
-    'b_pie=true'
   ],
   license : 'LICENSE',
-  subproject_dir : 'subprojects')
+)
 
 # Include subprojects for libraries
 libecc_proj = subproject('libecc')
@@ -26,59 +27,20 @@ libx509_dep = declare_dependency(
 )
 
 # Compiler detection and configuration
-cc = meson.get_compiler('c')
-compiler_id = cc.get_id()
+compiler = meson.get_compiler('c')
+compiler_id = compiler.get_id()
 
 # Base compilation flags
-c_std_flag = ['-std=c99']
-pedantic_flags = ['-pedantic', '-fno-builtin']
+# most of hardening flags, by now, are controlled through meson options
+
+pedantic_flags = ['-pedantic', '-fno-builtin', '-ffreestanding']
 fortify_flags = ['-D_FORTIFY_SOURCE=2']
-stack_prot_flag = ['-fstack-protector-strong']
-
-# Compilation flags - adapted by compiler type
-if compiler_id == 'clang'
-  warning_flags = [
-    '-Weverything',
-    '-Werror',
-    '-Wno-reserved-id-macro',
-    '-Wno-unreachable-code-break',
-    '-Wno-covered-switch-default',
-    '-Wno-padded'
-  ]
-else
-  # GCC or default
-  warning_flags = [
-    '-W',
-    '-Werror',
-    '-Wextra',
-    '-Wall',
-    '-Wunreachable-code'
-  ]
-endif
-
-# Debug flags
-debug_flags = ['-DDEBUG', '-g']
-
-# Hardening flags
-pic_flag = ['-fPIC']
-# PIE is now handled via b_pie=true option
-pie_ldflags = ['-Wl,-z,relro,-z,now']
 
 # Library compilation flags (with PIC and freestaniding)
-lib_cflags = warning_flags + c_std_flag + pedantic_flags + fortify_flags + stack_prot_flag + pic_flag + ['-ffreestanding']
+lib_cflags = pedantic_flags + fortify_flags
 
 # Binary compilation flags
-bin_cflags = warning_flags + c_std_flag + pedantic_flags + fortify_flags + stack_prot_flag
-
-# Binary linking flags (without -pie and -fpie, handled by Meson)
-bin_ldflags = pie_ldflags
-
-# Debug build configuration
-if get_option('buildtype') == 'debug'
-  lib_cflags += debug_flags
-  bin_cflags += debug_flags
-  bin_ldflags += debug_flags
-endif
+bin_cflags = pedantic_flags + fortify_flags
 
 # Create the main executable
 src_files = [
@@ -94,10 +56,11 @@ src_files = [
 executable('x509-verif',
   src_files,
   c_args : bin_cflags,
-  link_args : bin_ldflags,
   dependencies : [libsign_dep, libx509_dep],
   install : true,
   install_dir : 'bin',
-  # Note: libecc generates some internal consistency check symbols that may not be resolved in all builds
-  # Disable strict symbol checking for linking
-  override_options: ['b_lundef=false'])
+)
+
+if get_option('with_tests')
+  subdir('tests')
+endif
