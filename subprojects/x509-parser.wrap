@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/camelot-os/x509-parser.git
+revision = main
+depth = 1
