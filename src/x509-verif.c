@@ -13,7 +13,8 @@
 #include "cert-extract.h"
 #include "sig-verif.h"
 #include "x509-types.h"
-#include <string.h>
+
+int memcmp(const void *s1, const void *s2, size_t n);
 
 /* XXX FIXME
  * revisit that: at the momoent, we deal with a sequence encapsulating
@@ -57,6 +58,41 @@ static const unsigned char oid_ed25519[] = { /* "1.3.101.112" */
 static const unsigned char oid_ed448[] = { /* "1.3.101.113" */
 	0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x71
 };
+
+static const unsigned char oid_gostR3411_94_with_gostR3410_2001[] = { /* 1.2.643.2.2.3 */
+	0x30, 0x08, 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x03
+};
+
+static const unsigned char oid_gostR3411_94_with_gostR3410_2001_bis[] = { /* 1.2.643.2.2.3 followed by NULL */
+	0x30, 0x0a, 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x03, 0x05, 0x00
+};
+
+static const unsigned char oid_gostR3411_94_with_gostR3410_94[] = { /* 1.2.643.2.2.4 */
+	0x30, 0x08, 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x04
+};
+
+static const unsigned char oid_gostR3410_2001[] = { /* 1.2.643.2.2.19 */
+	0x30, 0x08, 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x13
+};
+
+
+static const unsigned char oid_gost3410_2012_256[] = { /* 1.2.643.7.1.1.3.2 */
+	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x85, 0x03, 0x07, 0x01, 0x01, 0x03, 0x02
+};
+
+static const unsigned char oid_gost3410_2012_512[] = { /* 1.2.643.7.1.1.3.3 */
+	0x30, 0x0a, 0x06, 0x08, 0x2a, 0x85, 0x03, 0x07, 0x01, 0x01, 0x03, 0x03
+};
+
+
+/*
+ * This is where current approach does not make sense: we have a sequence
+ * containing 1.2.643.2.2.3 OID followed by 0500, i.e. NULL
+ * XXX Revisit that ASAP
+ */
+// static const unsigned char oid_GOST_R_3411_94_GOST_R_3410_2001[] = { /* "1.2.643.2.2.3" */
+//	0x30, 0x0a, 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x03, 0x05, 0x00
+//};
 
 /*
  * From signature algorithm OID 'sig_alg_start' of length 'sig_alg_len', the
@@ -117,14 +153,55 @@ static int sig_oid_to_sig_and_hash_types(unsigned char *sig_alg_start,
 		*sig_alg_type = X509_EDDSA448;
 		*hash_alg_type = X509_SHAKE256;
 		printf("Detected EDDSA 448\n");
+	} else if ((sig_alg_len == sizeof(oid_gost3410_2012_256)) &&
+	    !memcmp(sig_alg_start, oid_gost3410_2012_256, sizeof(oid_gost3410_2012_256))) {
+		*sig_alg_type = X509_ECRDSA;
+		*hash_alg_type = X509_STREEBOG256;
+		printf("Detected ECRDSA w/ STREEBOG256\n");
+	} else if ((sig_alg_len == sizeof(oid_gost3410_2012_512)) &&
+	    !memcmp(sig_alg_start, oid_gost3410_2012_512, sizeof(oid_gost3410_2012_512))) {
+		*sig_alg_type = X509_ECRDSA;
+		*hash_alg_type = X509_STREEBOG512;
+		printf("Detected ECRDSA w/ STREEBOG256\n");
+	} else if ((sig_alg_len == sizeof(oid_gostR3411_94_with_gostR3410_2001)) &&
+	    !memcmp(sig_alg_start, oid_gostR3411_94_with_gostR3410_2001,
+		    sizeof(oid_gostR3411_94_with_gostR3410_2001))) {
+		*sig_alg_type = X509_ECRDSA;
+		*hash_alg_type = X509_STREEBOG256;
+		printf("Unsupported GOST sig\n");
+		ret = -1;
+		goto err;
+	} else if ((sig_alg_len == sizeof(oid_gostR3411_94_with_gostR3410_2001_bis)) &&
+	    !memcmp(sig_alg_start, oid_gostR3411_94_with_gostR3410_2001_bis,
+		    sizeof(oid_gostR3411_94_with_gostR3410_2001_bis))) {
+		*sig_alg_type = X509_ECRDSA;
+		*hash_alg_type = X509_STREEBOG256;
+		printf("Unsupported GOST sig\n");
+		ret = -1;
+		goto err;
+	} else if ((sig_alg_len == sizeof(oid_gostR3411_94_with_gostR3410_94)) &&
+	    !memcmp(sig_alg_start, oid_gostR3411_94_with_gostR3410_94,
+		    sizeof(oid_gostR3411_94_with_gostR3410_94))) {
+		*sig_alg_type = X509_ECRDSA;
+		*hash_alg_type = X509_STREEBOG256;
+		printf("Unsupported GOST sig\n");
+		ret = -1;
+		goto err;
+	} else if ((sig_alg_len == sizeof(oid_gostR3410_2001)) &&
+	    !memcmp(sig_alg_start, oid_gostR3410_2001,
+		    sizeof(oid_gostR3410_2001))) {
+		*sig_alg_type = X509_ECRDSA;
+		*hash_alg_type = X509_STREEBOG256;
+		printf("Unsupported GOST sig\n");
+		ret = -1;
+		goto err;
 	} else {
 		unsigned int i;
-		printf("Signature: ");
+		printf("Signature OID: ");
 		for (i = 0; i < sig_alg_len; i++) {
 			printf("%02x", sig_alg_start[i]);
 		}
 		printf("\n");
-
 		printf("here XXX %d\n", sig_alg_len);
 		ret = -1;
 		goto err;
@@ -153,8 +230,16 @@ static const unsigned char oid_secp521r1[] = { /* 1.3.132.0.35 */
 	0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x23
 };
 
-static const unsigned char oid_sm2p256v1[] = { /* 1.2.156.10197.1.301*/
+static const unsigned char oid_sm2p256v1[] = { /* 1.2.156.10197.1.301 */
 	0x06, 0x08, 0x2a, 0x81, 0x1c, 0xcf, 0x55, 0x01, 0x82, 0x2d
+};
+
+static const unsigned char oid_pubkey_gost3410_2012_256[] = { /* 1.2.643.7.1.1.1.1 */
+	0x06, 0x08, 0x2a, 0x85, 0x03, 0x07, 0x01, 0x01, 0x01, 0x01
+};
+
+static const unsigned char oid_pubkey_gostR3410_2001[] = { /* 1.2.643.2.2.19 */
+	0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x13
 };
 
 /*
@@ -167,6 +252,7 @@ static const unsigned char oid_sm2p256v1[] = { /* 1.2.156.10197.1.301*/
  *     ecPublicKey OID followed by the curve OID
  *  - Ed25519 and Ed448 curves which consists in a sequence containsing
  *    a single OID.
+ *  - GOST curve which consists in a sequence containsing     a single OID.
  */
 static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 				   unsigned int spki_alg_oid_len,
@@ -184,7 +270,7 @@ static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 
 	{
 		unsigned int i;
-		printf("OID: ");
+		printf("PubKeyOID: ");
 		for (i = 0; i < spki_alg_oid_len; i++) {
 			printf("%02x", spki_alg_oid_start[i]);
 		}
@@ -202,40 +288,150 @@ static int curve_oid_to_curve_type(unsigned char *spki_alg_oid_start,
 		*curve_type = X509_WEI25519;
 		ret = 0;
 		goto err;
-	} else if (spki_alg_oid_len < (2 + sizeof(oid_ecPublicKey))) {
-		ret = -1;
+	} else if ((spki_alg_oid_len >= (2 + sizeof(oid_ecPublicKey))) &&
+		(!memcmp(spki_alg_oid_start + 2, oid_ecPublicKey, sizeof(oid_ecPublicKey)))) {
+		/*
+		 * We expect a sequence of 2 OID, e.g. 3010 06072a8648ce3d0201
+		 * 06052b81040022. The first one being 06072a8648ce3d0201, i.e.
+		 * ecPublicKey (the one that just matched) and the next one
+		 * providing the curve OID.
+		 */
+
+		buf = spki_alg_oid_start + 2 + sizeof(oid_ecPublicKey);
+		remain = spki_alg_oid_len - (2 + sizeof(oid_ecPublicKey));
+		if (remain == sizeof(oid_secp256r1) &&
+			!memcmp(buf, oid_secp256r1, remain)) {
+			printf("X509_SECP256R1 %d\n", remain);
+			*curve_type = X509_SECP256R1;
+		} else if (remain == sizeof(oid_secp384r1) &&
+			!memcmp(buf, oid_secp384r1, remain)) {
+			printf("X509_SECP384R1 %d\n", remain);
+			*curve_type = X509_SECP384R1;
+		} else if (remain == sizeof(oid_secp521r1) &&
+			!memcmp(buf, oid_secp521r1, remain)) {
+			printf("X509_SECP521R1 %d\n", remain);
+			*curve_type = X509_SECP521R1;
+		} else if (remain == sizeof(oid_sm2p256v1) &&
+			!memcmp(buf, oid_sm2p256v1, remain)) {
+			printf("X509_SM2P256V1 %d\n", remain);
+			*curve_type = X509_SM2P256V1;
+		} else {
+			ret = -1;
+			goto err;
+		}
+	} else if ((spki_alg_oid_len >= (2 + sizeof(oid_pubkey_gost3410_2012_256))) &&
+		(!memcmp(spki_alg_oid_start + 2, oid_pubkey_gost3410_2012_256, sizeof(oid_pubkey_gost3410_2012_256)))) {
+		/* Then, we will find a sequence (?!?) */
+		int found;
+
+		buf = spki_alg_oid_start + 2 + sizeof(oid_pubkey_gost3410_2012_256);
+		remain = spki_alg_oid_len - (2 + sizeof(oid_pubkey_gost3410_2012_256));
+
+		if (remain < 2) {
+			ret = -1;
+			goto err;
+		}
+		buf += 2;
+		remain -= 2;
+
+		const unsigned char oid_cryptoproA[] = { 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x23, 0x01 };
+		const unsigned char oid_cryptoproAbis[] = { 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x1f, 0x01, };
+		const unsigned char oid_cryptoproXchA[] = { 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x24, 0x00 };
+		const unsigned char oid_paramsetA[] = { 0x06, 0x09, 0x2a, 0x85, 0x03, 0x07, 0x01, 0x02, 0x01, 0x01, 0x01, };
+		const unsigned char oid_testparam256[] = { 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x23, 0x00 };
+		found = 0;
+		while (remain) {
+			if (remain >= sizeof(oid_cryptoproA) && !memcmp(buf, oid_cryptoproA, sizeof(oid_cryptoproA))) {
+				printf("X509_GOST_CRYPTOPRO_A 1\n");
+				*curve_type = X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET;
+				found = 1;
+				break;
+			}
+			if (remain >= sizeof(oid_cryptoproAbis) && !memcmp(buf, oid_cryptoproAbis, sizeof(oid_cryptoproAbis))) {
+				printf("X509_GOST_CRYPTOPRO_A 2\n");
+				*curve_type = X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET;
+				found = 1;
+				break;
+			}
+			if (remain >= sizeof(oid_cryptoproXchA) && !memcmp(buf, oid_cryptoproXchA, sizeof(oid_cryptoproXchA))) {
+				printf("X509_GOST_CRYPTOPRO_A 3\n");
+				*curve_type = X509_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET;
+				found = 1;
+				break;
+			}
+			if (remain >= sizeof(oid_paramsetA) && !memcmp(buf, oid_paramsetA, sizeof(oid_paramsetA))) {
+				printf("X509_GOST_CRYPTOPRO_A 4 here\n");
+				*curve_type = X509_GOST_R3410_2012_256_PARAMSETA;
+				found = 1;
+				break;
+			}
+			if (remain >= sizeof(oid_testparam256) && !memcmp(buf, oid_testparam256, sizeof(oid_testparam256))) {
+				printf("X509_GOST_CRYPTOPRO_A 4 bis\n");
+				*curve_type = X509_GOST256;
+				found = 1;
+				break;
+			}
+			/* not found */
+
+			remain -= buf[1] + 2; /* skip to next OID */
+			buf += buf[1] + 2;
+		}
+
+		ret = found ? 0 : -1;
 		goto err;
-	}
+	} else if ((spki_alg_oid_len >= (2 + sizeof(oid_pubkey_gostR3410_2001))) &&
+		(!memcmp(spki_alg_oid_start + 2, oid_pubkey_gostR3410_2001, sizeof(oid_pubkey_gostR3410_2001)))) {
+		/* Then, we will find a sequence (?!?) */
+		int found;
 
-	/*
-	 * We expect a sequence of 2 OID, e.g. 3010 06072a8648ce3d0201 06052b81040022.
-	 * The first one being 06072a8648ce3d0201, i.e. ecPublicKey and the next one
-	 * providing the curve OID.
-	 */
+		buf = spki_alg_oid_start + 2 + sizeof(oid_pubkey_gostR3410_2001);
+		remain = spki_alg_oid_len - (2 + sizeof(oid_pubkey_gostR3410_2001));
 
-	if (memcmp(spki_alg_oid_start + 2, oid_ecPublicKey, sizeof(oid_ecPublicKey))) {
-		ret = -1;
+		if (remain < 2) {
+			ret = -1;
+			goto err;
+		}
+		buf += 2;
+		remain -= 2;
+
+		const unsigned char oid_cryptoproA[] = { 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x23, 0x01 };
+		const unsigned char oid_cryptoproAbis[] = { 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x1f, 0x01, };
+		const unsigned char oid_cryptoproXchA[] = { 0x06, 0x07, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x24, 0x00 };
+		const unsigned char oid_paramsetA[] = { 0x06, 0x09, 0x2a, 0x85, 0x03, 0x07, 0x01, 0x02, 0x01, 0x01, 0x01, };
+		found = 0;
+		while (remain) {
+			if (remain >= sizeof(oid_cryptoproA) && !memcmp(buf, oid_cryptoproA, sizeof(oid_cryptoproA))) {
+				printf(" X509_GOST_CRYPTOPRO_A 5\n");
+				*curve_type = X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET;
+				found = 1;
+				break;
+			}
+			if (remain >= sizeof(oid_cryptoproAbis) && !memcmp(buf, oid_cryptoproAbis, sizeof(oid_cryptoproAbis))) {
+				printf(" X509_GOST_CRYPTOPRO_A 6\n");
+				*curve_type = X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET;
+				found = 1;
+				break;
+			}
+			if (remain >= sizeof(oid_cryptoproXchA) && !memcmp(buf, oid_cryptoproXchA, sizeof(oid_cryptoproXchA))) {
+				printf(" X509_GOST_CRYPTOPRO_A 7\n");
+				*curve_type = X509_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET;
+				found = 1;
+				break;
+			}
+			if (remain >= sizeof(oid_paramsetA) && !memcmp(buf, oid_paramsetA, sizeof(oid_paramsetA))) {
+				printf(" X509_GOST_CRYPTOPRO_A 8\n");
+				*curve_type = X509_GOST_R3410_2012_256_PARAMSETA;
+				found = 1;
+				break;
+			}
+			/* not found */
+
+			remain -= buf[1] + 2; /* skip to next OID */
+			buf += buf[1] + 2;
+		}
+
+		ret = found ? 0 : -1;
 		goto err;
-	}
-
-	buf = spki_alg_oid_start + 2 + sizeof(oid_ecPublicKey);
-	remain = spki_alg_oid_len - (2 + sizeof(oid_ecPublicKey));
-	if (remain == sizeof(oid_secp256r1) &&
-	    !memcmp(buf, oid_secp256r1, remain)) {
-		printf("X509_SECP256R1 %d\n", remain);
-		*curve_type = X509_SECP256R1;
-	} else if (remain == sizeof(oid_secp384r1) &&
-		   !memcmp(buf, oid_secp384r1, remain)) {
-		printf("X509_SECP384R1 %d\n", remain);
-		*curve_type = X509_SECP384R1;
-	} else if (remain == sizeof(oid_secp521r1) &&
-		   !memcmp(buf, oid_secp521r1, remain)) {
-		printf("X509_SECP521R1 %d\n", remain);
-		*curve_type = X509_SECP521R1;
-	} else if (remain == sizeof(oid_sm2p256v1) &&
-		   !memcmp(buf, oid_sm2p256v1, remain)) {
-		printf("X509_SM2P256V1 %d\n", remain);
-		*curve_type = X509_SM2P256V1;
 	} else {
 		ret = -1;
 		goto err;
@@ -281,6 +477,15 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 		goto err;
 	}
 
+	{
+		unsigned int i;
+		printf("tbs: ");
+		for(i = 0; i < tbs_len; i++) {
+			printf("%02x", tbs_start[i]);
+		}
+		printf("\n");
+	}
+
 	printf("sig_alg_len %d\n", sig_alg_len);
 	/*
 	 * Now, extract from anchor:
@@ -312,6 +517,11 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 	ret = curve_oid_to_curve_type(spki_alg_oid_start, spki_alg_oid_len,
 				      &curve_type);
 	if (ret) {
+		printf("Curve OID: ");
+		for (i = 0; i < spki_alg_oid_len; i++) {
+			printf("%02x", spki_alg_oid_start[i]);
+		}
+		printf("\n");
 		printf("Error handling SPKI alg OID\n");
 		goto err;
 	}
@@ -328,7 +538,7 @@ int x509_cert_verif(unsigned char *tbv_cert, unsigned short tbv_cert_len,
 	}
 	printf("\n");
 
-	printf("pubkey : ");
+	printf("spki : ");
 	for (i = 0; i < spki_pub_key_len; i++) {
 		printf("%02x", spki_pub_key_start[i]);
 	}

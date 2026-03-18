@@ -10,7 +10,29 @@
  */
 
 #include "cert-extract.h"
-#include "../../x509-parser-verif/src/x509-parser.h" /* FIXME use -I */
+#include <x509/x509-parser.h>
+
+/* External functions from prebuilt x509-parser.o that are not declared in headers */
+extern int x509_cert_extract_tbs_and_sig(const unsigned char *buf, unsigned int len,
+					unsigned char **tbs_start, unsigned short *tbs_len,
+					unsigned char **sig_alg_start, unsigned short *sig_alg_len,
+					unsigned char **sig_start, unsigned short *sig_len);
+
+extern int x509_cert_extract_SPKI(const unsigned char *buf, unsigned int len,
+				  unsigned char **spki_alg_oid_start, unsigned short *spki_alg_oid_len,
+				  unsigned char **spki_pub_key_start, unsigned short *spki_pub_key_len);
+
+extern int x509_cert_is_self_signed(const unsigned char *buf, unsigned short len, int *self_signed);
+
+extern int parse_sig_ecdsa_export_r_s(const unsigned char *sig, unsigned int sig_len,
+				     unsigned short *r_start, unsigned short *r_len,
+				     unsigned short *s_start, unsigned short *s_len,
+				     unsigned short *eaten);
+
+extern int parse_sig_eddsa_export_r_s(const unsigned char *sig, unsigned int sig_len,
+				     unsigned short *r_start, unsigned short *r_len,
+				     unsigned short *s_start, unsigned short *s_len,
+				     unsigned short *eaten);
 
 int x509_cert_get_tbs_sig(unsigned char *buf, unsigned int len,
 			  unsigned char **tbs_start, unsigned int *tbs_len,

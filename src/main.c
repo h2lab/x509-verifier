@@ -172,13 +172,16 @@ int main_self_signed_relaxed(int argc, char *argv[])
 			ret = x509_cert_self_signed(buf, eaten, &self_signed);
 			if (!ret) {
 				if (self_signed) {
-					/* verify cert using anchor */
-					ret = x509_cert_verif(buf, eaten, buf, eaten);
-					if (ret) {
-						printf("Sig verif failed for %s %llu %d\n", path, offset, eaten);
-					} else {
-						printf("Sig verif OK for %s\n", path);
-					}
+					printf("[Self signed] %s\n", path);
+				} else {
+					printf("Not self signed\n");
+				}
+				/* verify cert using anchor */
+				ret = x509_cert_verif(buf, eaten, buf, eaten);
+				if (ret) {
+					printf("Sig verif failed for %s %llu %d\n", path, offset, eaten);
+				} else {
+					printf("Sig verif OK for %s\n", path);
 				}
 			}
 		}

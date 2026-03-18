@@ -9,11 +9,13 @@
  *  LICENSE file at the root folder of the project.
  */
 
+#include <libecc/libsig.h>
+
 #include "sig-verif.h"
 #include "cert-extract.h"
-#include "../../libecc-verif/src/libsig.h" /* FIXME use -I */
 
-static int x509_to_libecc_sig_alg_type(x509_ec_sig_alg in, ec_sig_alg_type *out)
+
+static int x509_to_libecc_sig_alg_type(x509_ec_sig_alg in, ec_alg_type *out)
 {
 	int ret;
 
@@ -61,7 +63,7 @@ static int x509_to_libecc_sig_alg_type(x509_ec_sig_alg in, ec_sig_alg_type *out)
 		*out = DECDSA;
 		break;
 	default:
-		*out = UNKNOWN_SIG_ALG;
+		*out = UNKNOWN_ALG;
 		ret = -1;
 		goto err;
 		break;
@@ -166,15 +168,12 @@ static int import_curve_params_from_x509_curve_type(x509_curve curve_type,
 	case X509_BRAINPOOLP512R1:
 		import_params(ecp, &brainpoolp512r1_str_params);
 		break;
-#if 0
-		/* XXX Add real gost curves later */
 	case X509_GOST256:
-		import_params(ecp, &gost256_str_params);
+		import_params(ecp, &GOST_256bits_curve_str_params);
 		break;
 	case X509_GOST512:
-		import_params(ecp, &gost512_str_params);
+		import_params(ecp, &GOST_512bits_curve_str_params);
 		break;
-#endif
 	case X509_BRAINPOOLP384R1:
 		import_params(ecp, &brainpoolp384r1_str_params);
 		break;
@@ -189,6 +188,48 @@ static int import_curve_params_from_x509_curve_type(x509_curve curve_type,
 		break;
 	case X509_SM2P256V1:
 		import_params(ecp, &sm2p256v1_str_params);
+		break;
+	case X509_GOST_R3410_2001_TESTPARAMSET:
+		import_params(ecp, &gost_R3410_2001_TestParamSet_str_params);
+		break;
+	case X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET:
+		import_params(ecp, &gost_R3410_2001_CryptoPro_A_ParamSet_str_params);
+		break;
+	case X509_GOST_R3410_2001_CRYPTOPRO_B_PARAMSET:
+		import_params(ecp, &gost_R3410_2001_CryptoPro_B_ParamSet_str_params);
+		break;
+	case X509_GOST_R3410_2001_CRYPTOPRO_C_PARAMSET:
+		import_params(ecp, &gost_R3410_2001_CryptoPro_C_ParamSet_str_params);
+		break;
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET:
+		import_params(ecp, &gost_R3410_2001_CryptoPro_XchA_ParamSet_str_params);
+		break;
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHB_PARAMSET:
+		import_params(ecp, &gost_R3410_2001_CryptoPro_XchB_ParamSet_str_params);
+		break;
+	case X509_GOST_R3410_2012_256_PARAMSETA:
+		import_params(ecp, &gost_R3410_2012_256_paramSetA_str_params);
+		break;
+	case X509_GOST_R3410_2012_256_PARAMSETB:
+		import_params(ecp, &gost_R3410_2012_256_paramSetB_str_params);
+		break;
+	case X509_GOST_R3410_2012_256_PARAMSETC:
+		import_params(ecp, &gost_R3410_2012_256_paramSetC_str_params);
+		break;
+	case X509_GOST_R3410_2012_256_PARAMSETD:
+		import_params(ecp, &gost_R3410_2012_256_paramSetD_str_params);
+		break;
+	case X509_GOST_R3410_2012_512_PARAMSETTEST:
+		import_params(ecp, &gost_R3410_2012_512_paramSetTest_str_params);
+		break;
+	case X509_GOST_R3410_2012_512_PARAMSETA:
+		import_params(ecp, &gost_R3410_2012_512_paramSetA_str_params);
+		break;
+	case X509_GOST_R3410_2012_512_PARAMSETB:
+		import_params(ecp, &gost_R3410_2012_512_paramSetB_str_params);
+		break;
+	case X509_GOST_R3410_2012_512_PARAMSETC:
+		import_params(ecp, &gost_R3410_2012_512_paramSetC_str_params);
 		break;
 	default:
 		ret = -1;
@@ -209,7 +250,7 @@ err:
  * format, depneding on curve_type.
 
 
-0362 bitstring 0x62 de long ... 
+0362 bitstring 0x62 de long ...
 00 .. avec 0 bit unused dans l'octet de poids fort
 04 uncompressed point, the only we support, followed by X and Y :
 d4bc3d024275411323cd80048602512f6aa881620b65ccf6ca9d1e6f4a6651a203d99d91fab616b18c6ede7ccddb79a6
@@ -255,7 +296,58 @@ static int x509_to_libecc_pub_key(unsigned char *in_pub_key, unsigned int in_pub
 		local_memcpy(out_pub, in_pub_key + 3, 114/2);
 		*out_pub_len = 114/2;
 		break;
-		/* XXX Add missing algs */
+	case X509_GOST256:
+	case X509_GOST_R3410_2001_TESTPARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_B_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_C_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHB_PARAMSET:
+	case X509_GOST_R3410_2012_256_PARAMSETA:
+	case X509_GOST_R3410_2012_256_PARAMSETB:
+	case X509_GOST_R3410_2012_256_PARAMSETC:
+	case X509_GOST_R3410_2012_256_PARAMSETD:
+		/* XXX Let's cheat a bit for now */
+		local_memcpy(out_pub, in_pub_key + 5, 32 * 2);
+		*out_pub_len = 32 * 2;
+		/* the two components are LE encoded. Reverse
+		   them here at the moment XXX make that more coherent */
+		{
+			u8 i, tmp;
+			for (i = 0; i < 16; i++) {
+				tmp = out_pub[i];
+				out_pub[i] = out_pub[31 - i];
+				out_pub[31 - i] = tmp;
+
+				tmp = out_pub[i+32];
+				out_pub[i + 32] = out_pub[63 - i];
+				out_pub[63 - i] = tmp;
+			}
+		}
+		break;
+	case X509_GOST_R3410_2012_512_PARAMSETTEST:
+	case X509_GOST_R3410_2012_512_PARAMSETA:
+	case X509_GOST_R3410_2012_512_PARAMSETB:
+	case X509_GOST_R3410_2012_512_PARAMSETC:
+	case X509_GOST512:
+		/* XXX Let's cheat a bit for now */
+		local_memcpy(out_pub, in_pub_key + 7, 64 * 2);
+		*out_pub_len = 64 * 2;
+		/* the two components are LE encoded. Reverse
+		   them here at the moment XXX make that more coherent */
+		{
+			u8 i, tmp;
+			for (i = 0; i < 32; i++) {
+				tmp = out_pub[i];
+				out_pub[i] = out_pub[63 - i];
+				out_pub[63 - i] = tmp;
+
+				tmp = out_pub[i+64];
+				out_pub[i + 64] = out_pub[127 - i];
+				out_pub[127 - i] = tmp;
+			}
+		}
+		break;
 	default:
 		ret = -1;
 		goto err;
@@ -301,14 +393,26 @@ static int curve_order_len(x509_curve curve_type, unsigned int *order_len)
 	case X509_SECP521R1:
 		*order_len = 66;
 		break;
-#if 0 /* XXX revisit when adding proper GOST curves support */
 	case X509_GOST256:
+	case X509_GOST_R3410_2001_TESTPARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_B_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_C_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHB_PARAMSET:
+	case X509_GOST_R3410_2012_256_PARAMSETA:
+	case X509_GOST_R3410_2012_256_PARAMSETB:
+	case X509_GOST_R3410_2012_256_PARAMSETC:
+	case X509_GOST_R3410_2012_256_PARAMSETD:
 		*order_len = 32;
 		break;
+	case X509_GOST_R3410_2012_512_PARAMSETTEST:
+	case X509_GOST_R3410_2012_512_PARAMSETA:
+	case X509_GOST_R3410_2012_512_PARAMSETB:
+	case X509_GOST_R3410_2012_512_PARAMSETC:
 	case X509_GOST512:
 		*order_len = 64;
 		break;
-#endif
 	default:
 		ret = -1;
 		goto err;
@@ -342,7 +446,7 @@ err:
  */
 
 /*
-secp521r1 
+secp521r1
 03818b00
 308187
 02420119ebfcfccdfa5a00acae57cd072130f5e11e4f36f32142cfe164bb60bd48f0c835f10292430f02f07d1a417933804840fe76d3c7bd1a406abdd6ecd451f92c542d
@@ -407,6 +511,65 @@ err:
 	return ret;
 }
 
+static int x509_to_libecc_sig_ecrdsa(unsigned char *in_sig,
+				    unsigned int in_sig_len,
+				    x509_curve curve_type,
+				    u8 *out_sig, u16 *out_sig_len)
+{
+	unsigned int order_len;
+	u16 len;
+	int ret;
+
+	switch (curve_type) {
+	case X509_GOST256:
+	case X509_GOST_R3410_2001_TESTPARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_B_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_C_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET:
+	case X509_GOST_R3410_2001_CRYPTOPRO_XCHB_PARAMSET:
+	case X509_GOST_R3410_2012_256_PARAMSETA:
+	case X509_GOST_R3410_2012_256_PARAMSETB:
+	case X509_GOST_R3410_2012_256_PARAMSETC:
+	case X509_GOST_R3410_2012_256_PARAMSETD:
+		order_len = 32;
+		break;
+	case X509_GOST_R3410_2012_512_PARAMSETTEST:
+	case X509_GOST_R3410_2012_512_PARAMSETA:
+	case X509_GOST_R3410_2012_512_PARAMSETB:
+	case X509_GOST_R3410_2012_512_PARAMSETC:
+	case X509_GOST512:
+		order_len = 64;
+		break;
+	default:
+		ret = -1;
+		goto err;
+		break;
+	}
+
+	if (in_sig_len != (2 * order_len + 3)) {
+		ret = -1;
+		goto err;
+	}
+
+	/* From draft-deremin-rfc4491-bis-06: GOST R 34.10-2012 signature
+	   algorithm with 256-bit key length generates a digital signature
+	   in the form of two 256-bit numbers, r and s.  Its octet string
+	   representation consists of 64 octets, where the first 32 octets
+	   contain the big-endian representation of s and the second 32
+	   octets contain the big-endian representation of r. */
+	len = in_sig_len - 3;
+	*out_sig_len = len;
+
+	local_memcpy(out_sig, in_sig + 3 + (len / 2) , len / 2);
+	local_memcpy(out_sig + (len / 2), in_sig + 3 , len / 2);
+
+	ret = 0;
+
+err:
+	return ret;
+}
+
 /*
  * Convert signature from X.509 certificate to the format expected by libecc.
  * this depends on the
@@ -437,6 +600,10 @@ static int x509_to_libecc_sig(unsigned char *in_sig, unsigned int in_sig_len,
 		ret = x509_to_libecc_sig_eddsa(in_sig, in_sig_len, curve_type,
 					       out_sig, out_sig_len);
 		break;
+	case X509_ECRDSA:
+		ret = x509_to_libecc_sig_ecrdsa(in_sig, in_sig_len, curve_type,
+						out_sig, out_sig_len);
+		break;
 	default:
 		ret = -1;
 		goto err;
@@ -449,14 +616,14 @@ err:
 
 /*
   https://patchwork.kernel.org/project/linux-security-module/patch/20200920162103.83197-10-tianjia.zhang@linux.alibaba.com/
-  The default user id as specified in GM/T 0009-2012 
+  The default user id as specified in GM/T 0009-2012
 */
 const u8 sm2_default_user_id[] = "1234567812345678";
 const u16 sm2_default_user_id_len = sizeof(sm2_default_user_id) - 1; /* 16 */
 
 int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 {
-	ec_sig_alg_type sig_type;
+	ec_alg_type sig_type;
 	hash_alg_type hash_type;
 	ec_params ecp;
 	ec_pub_key pubkey;
@@ -472,7 +639,10 @@ int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 		ret = -1;
 		goto err;
 	}
-
+	{
+		extern int printf(const char *format, ...);
+		printf("curve_type %d\n", ctx->curve_type);
+	}
 	/* Let's first get libecc version of sig, hash and curve */
 	ret  = x509_to_libecc_sig_alg_type(ctx->sig_alg_type, &sig_type);
 	if (ret) {
@@ -499,13 +669,12 @@ int x509_sig_verify(const x509_sig_verify_ctx *ctx)
 	}
 
 	/* And then import it */
-
 	if ((sig_type == EDDSA25519) || (sig_type == EDDSA448)) {
 		ret = eddsa_import_pub_key(&pubkey, pub, pub_len, &ecp, sig_type);
 		if (ret) {
 			goto err;
 		}
-	} else { /* ECDSA, SM2 */
+	} else { /* ECDSA, SM2, ECRDSA */
 		ret = ec_pub_key_import_from_aff_buf(&pubkey, &ecp,
 						    pub, pub_len, sig_type);
 		if (ret) {
