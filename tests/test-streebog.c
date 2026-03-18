@@ -50,7 +50,9 @@ int main(void)
 
 	const uint8_t * const msg_list[] = {
 		msg, msgrev, msg2, msg2rev
-
+	};
+	const size_t msg_sizes[] = {
+		sizeof(msg), sizeof(msgrev), sizeof(msg2), sizeof(msg2rev)
 	};
 	int ret = -1;
 
@@ -61,7 +63,7 @@ int main(void)
 
 	for (i = 0; i < sizeof(msg_list) / sizeof(msg_list[0]); i++) {
 		h->hfunc_init(&h_ctx);
-		h->hfunc_update(&h_ctx, msg_list[i], 64);
+		h->hfunc_update(&h_ctx, msg_list[i], msg_sizes[i]);
 		h->hfunc_finalize(&h_ctx, dgst);
 		printf("Hash : ");
 		for (unsigned int j = 0; j < 32; j++) {

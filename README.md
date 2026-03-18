@@ -24,31 +24,33 @@ Both libecc and x509-parser are included as Meson subprojects in `subprojects/`.
 ### Building from Source
 
 1. **Prerequisites** - Ensure you have Meson and a C compiler installed:
-   ```bash
-   # Debian/Ubuntu
-   sudo apt-get install meson gcc
 
-   # Fedora/RHEL
-   sudo dnf install meson gcc
-
-   # macOS with Homebrew
-   brew install meson gcc
-   ```
+```bash
+# Debian/Ubuntu
+sudo apt-get install meson gcc
+# Fedora/RHEL
+sudo dnf install meson gcc
+# macOS with Homebrew
+brew install meson gcc
+```
 
 2. **Configure the build**:
-   ```bash
-   meson setup builddir
-   ```
+
+```bash
+meson setup builddir
+```
 
 3. **Compile the project**:
-   ```bash
-   meson compile -C builddir
-   ```
+
+```bash
+meson compile -C builddir
+```
 
 4. **Install** (optional):
-   ```bash
-   meson install -C builddir
-   ```
+
+```bash
+meson install -C builddir
+```
 
 The compiled binary `x509-verif` will be located in `builddir/x509-verif`.
 
@@ -65,18 +67,21 @@ Verify a certificate using a self-signed anchor certificate:
 ```
 
 **Arguments:**
+
 - `certificate.der`: The certificate to verify (binary DER format)
 - `anchor.der`: The trusted anchor certificate for verification (binary DER format)
 
 ### Example Certificates
 
 The project includes several test certificates for verification:
+
 - `ed448-self-signed.der` - Self-signed Ed448 certificate
 - `sm2-self-signed.der` - Self-signed SM2 certificate
 - `rfc4491-bis.der`, `rfc4491-bis-cert2.der`, `rfc4491-bis-cert3.der` - RFC 4491 test vectors
 - `artifacts/all-gost-sig2012/` - GOST signature algorithm test certificates
 
 Run tests:
+
 ```bash
 meson test -C builddir
 ```
@@ -84,6 +89,7 @@ meson test -C builddir
 ## Advanced Build Options
 
 Build with tests enabled:
+
 ```bash
 meson setup builddir -Dwith_tests=true
 meson compile -C builddir
@@ -91,13 +97,14 @@ meson test -C builddir
 ```
 
 Clean the build directory:
+
 ```bash
 rm -rf builddir
 ```
 
 ## Project Structure
 
-```
+```bash
 src/                      # Source code
 ├── main.c               # Main entry point
 ├── x509-verif.c/h       # Core verification logic
@@ -118,6 +125,7 @@ subprojects/            # External dependencies as Meson subprojects
 ## Supported Algorithms
 
 The tool supports verification of certificates signed with:
+
 - RSA with PKCS#1 v1.5 padding
 - ECDSA (NIST curves and others)
 - EdDSA (Ed25519, Ed448)

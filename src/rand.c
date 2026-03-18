@@ -58,6 +58,18 @@ static int fimport(unsigned char *buf, u16 buflen, const char *path)
 	return (copied == buflen) ? 0 : -1;
 }
 
+/**
+ * \note the random source is overridable by defining the get_random
+ * function in a separate file and linking it with the project.
+ * This is a useful feature that is assocated to libecc initial design and
+ * used in embedded system.
+ * Here, we add a simple implementation of get_random for Unix and compatible systems that
+ * reads from /dev/urandom. This is not the most efficient way to get random data, but it is
+ * good enough for testing purposes.
+ * Note that this file is not to be compiled in a production environment but instead
+ * replace with a proper, context-aware implementation of get_random that uses a proper entropy
+ * source and a clean PRNG post-processing when needed.
+ */
 int get_random(unsigned char *buf, u16 len)
 {
 	return fimport(buf, len, "/dev/urandom");

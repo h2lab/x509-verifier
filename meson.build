@@ -53,7 +53,7 @@ src_files = [
   'src/libecc-compat.c'
 ]
 
-executable('x509-verif',
+x509_verif = executable('x509-verif',
   src_files,
   c_args : bin_cflags,
   dependencies : [libsign_dep, libx509_dep],
