@@ -1,6 +1,6 @@
 # x509-verif: X.509 Certificate Verification Tool
 
-A command-line utility for verifying X.509 digital certificates against trusted anchor certificates. This tool leverages the robust parsing capabilities of [x509-parser](https://github.com/ANSSI-FR/x509-parser) and the cryptographic verification features of [libecc](https://github.com/ANSSI-FR/libecc).
+A command-line utility for verifying X.509 digital certificates against trusted anchor certificates. This tool leverages the robust parsing capabilities of [x509-parser](https://github.com/camelot-os/x509-parser) and the cryptographic verification features of [libecc](https://github.com/libecc/libecc).
 
 ## Features
 
